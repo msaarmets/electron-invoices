@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<script>window.$ = window.jQuery = require('jquery');</script>
+
+<body>
+    <div class="container single-invoice">
+        <div class="row">
+            <div class="col">
+                <h1 class="page-header">Invoice</h1>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-6"><strong class="text-uppercase">Hooneühistu Jalaka 2a</strong></div>
+            <div class="col-6"><strong><span class="text-uppercase">ARVE</span> nr</strong> <span id="invoice-nr"></span></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-6">Jalaka tn 2a, 90509 Haapsalu<br />Reg nr. 80074082</div>
+            <div class="col-4 invoice-payment-info-block">
+                <p>Kuupäev <span id="invoice-date"></span></p>
+                <p>Maksetähtaeg <strong><span id="invoice-due-date"></span></strong></p>
+                <p>SEB PANK EE741010602005809005</p>
+                <p>Liikmesus nr. <span id="custom1"></span></p>
+                <p><span id="email"></span></p>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12 receiver-info">
+                <p><span id="invoice-receiver"></span></p>
+                <p><span id="receiver-address"></span></p>
+                <p><span id="receiver-address2"></span></p>
+            </div>
+        </div>
+        <div class="row" id="invoice-rows-table">
+            <div class="col-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Kululiik</th>
+                            <th>Periood</th>
+                            <th>Kogus</th>
+                            <th>Ühik</th>
+                            <th>Ühiku hind</th>
+                            <th>Summa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Hooneühistu Jalaka 2a liikmemaks</td>
+                            <td>2018.a.</td>
+                            <td>1</td>
+                            <td>aasta</td>
+                            <td id="price"></td>
+                            <td id="sum"></td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5"><strong>Kokku</strong></td>
+                            <td id="invoice-sum" class="text-left font-weight-bold"></td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5"><strong>Saldo 31.12.2017</strong></td>
+                            <td id="balance" class="text-left font-weight-bold"></td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5">Laekunud 2017.a.</td>
+                            <td id="payments-received" class="text-left"></td>
+                        </tr>
+                        <tr class="invoice-total-to-pay-block">
+                            <td colspan="5"><strong>Kuulub tasumisele</strong></td>
+                            <td id="total-to-pay" class="text-left font-weight-bold"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row my-5" id="invoice-text">
+            <div class="col-12">
+                <p>Kontakttelefonid: 55640157, 53439767</p>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    const remoteModule = require('electron').remote;
+    // Root folder of app
+    let rootFolder = remoteModule.getGlobal('rootFolder');
+    // Javascript
+    require(rootFolder + "/assets/dist/main.js");
+    $('head').load(rootFolder + "/assets/pages/partials/head.html");
+    // CSS
+    $('head').append(`<link rel="stylesheet" type="text/css" href="${rootFolder + '/assets/dist/main.css'}">`)
+</script>
+
+<script>
+    // Get invoice ID
+    // If it's set in URL parameter use this value
+    var url_string = window.location.href;
+    var url = new URL(url_string);
+    var id = url.searchParams.get("id");
+    let invoiceID;
+
+    if(id != null) {
+        invoiceID = id; // Used in "print all" functionality to open web pages with URL parameter
+    }
+    else{
+        invoiceID = parseInt(localStorage.getItem("selectedInvoice"));  // Else get id from localstorage
+    }
+
+    // Get only selected invoice data
+    console.log(JSON.parse(localStorage.getItem("invoiceData")))
+    const invoiceData = JSON.parse(localStorage.getItem("invoiceData")).invoices[invoiceID];
+    const generalData = JSON.parse(localStorage.getItem("invoiceData"));
+</script>
+
+<script>
+    /*
+    * Set invoice data to HTML
+    */
+    const moment = require("moment");
+    const _ = require("lodash");
+
+    $("#invoice-nr").html(invoiceData[13]);
+    $("#invoice-date").html(moment(generalData.date).format("DD.MM.YYYY"));
+    $("#invoice-due-date").html(moment(generalData.dueDate).format("DD.MM.YYYY"));
+    $("#custom1").html(invoiceData[1]);
+    $("#email").html(invoiceData[11]);
+    $("#invoice-receiver").html(invoiceData[2]);
+    $("#receiver-address").html(invoiceData[8]);
+    $("#receiver-address2").html(invoiceData[10] + " " + invoiceData[9]);
+    $("#price").html(toFloat(invoiceData[5]));
+    $("#sum").html(toFloat(invoiceData[5]));
+    $("#invoice-sum").html(toFloat(invoiceData[5]));
+    $("#balance").html(toFloat(invoiceData[4]));
+    $("#payments-received").html(toFloat(invoiceData[6]));
+    $("#total-to-pay").html(totalToPay());
+
+
+    function toFloat(data) {
+        return Math.round(parseFloat(data) * 100) / 100;
+    }
+
+    function totalToPay() {
+        let values = {
+            invoiceSum: invoiceData[5],
+            balance: invoiceData[4],
+            paymentsReceived: invoiceData[6]
+        }
+
+        // Replace null values with zero
+        _.forEach(values, (value, key) => {
+            if (value == null) {
+                values[key] = 0;
+            }
+        })
+
+        // Calculate total sum to pay
+        let totalToPay = parseFloat(values.invoiceSum) + parseFloat(values.balance) - parseFloat(values.paymentsReceived);
+        totalToPay = Math.round(totalToPay * 100) / 100;
+        return totalToPay;
+    }
+</script>
+
+</html>

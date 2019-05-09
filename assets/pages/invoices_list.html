@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<script>window.$ = window.jQuery = require('jquery');</script>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="page-header">Invoices list</h1>
+                <div id="invoices"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 mb-5">
+                <button class="mx-2" id="all-to-pdf">Save all to PDF</button>
+                <button class="mx-2" id="all-to-single-pdf">Save all to single PDF</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    const remoteModule = require('electron').remote;
+    // Root folder of app
+    let rootFolder = remoteModule.getGlobal('rootFolder');
+    // Javascript
+    require(rootFolder + "/assets/dist/main.js");
+    $('head').load(rootFolder + "/assets/pages/partials/head.html");
+    // CSS
+    $('head').append(`<link rel="stylesheet" type="text/css" href="${rootFolder + '/assets/dist/main.css'}">`)
+</script>
+<script>
+    const { ipcRenderer } = require('electron');
+    const _ = require("lodash");
+    // Get invoicedata
+    let invoicesData;
+    try {
+        invoicesData = JSON.parse(remoteModule.getGlobal("ExcelData")).invoiceData;
+        localStorage.setItem('invoiceData', JSON.stringify(invoicesData));
+        createTable();
+    }
+    catch (error) {
+        // If data is not in global variable 
+
+        // Send information to the main process
+        // if a listener has been set, then the main process
+        // will react to the request !
+        (async () => {
+            await ipcRenderer.send('loadInvoiceDataToGlobal', {});
+
+            //invoicesData = JSON.parse(remoteModule.getGlobal("ExcelData")).invoiceData;
+            invoicesData = remoteModule.getGlobal("ExcelData");
+            localStorage.setItem('invoiceData', JSON.stringify(invoicesData));
+            createTable();
+        })();
+
+    }
+
+    let table = document.createElement("table");
+    table.classList.add('table');
+    table.classList.add('table-striped');
+    let tableHead = document.createElement("thead");
+    let tableBody = document.createElement("tbody");
+
+    function createTable() {
+        const keys = [
+            2,  // Customer name
+            5,  // Invoice row
+            4,  // Balance
+            13, // Invoice number
+            11  // E-mail
+        ]
+
+
+        // Table headers
+        let row = document.createElement('tr');
+
+        keys.map((key) => {
+            let th = document.createElement("th");
+            th.appendChild(document.createTextNode(invoicesData.invoices[0][key]));
+            row.appendChild(th);
+        })
+
+        tableHead.appendChild(row);
+
+        table.appendChild(tableHead);
+
+        // Table invoice rows
+        for (var i = 1; i < _.size(invoicesData.invoices); i++) {
+            let row = document.createElement('tr');
+            let td = document.createElement("td");
+
+            keys.map((key) => {
+                let data = invoicesData.invoices[i][key];
+
+                switch (key) {
+                    case 5:
+                        data = Math.round(data * 100) / 100;    // Round prices to 2 decimals
+                    case 4:
+                        data = Math.round(data * 100) / 100;    // Round prices to 2 decimals
+                    case 11:
+                        if (data == null) {     // Remove "null" from e-mail text
+                            data = ""
+                        }
+
+                }
+                const td = document.createElement("td");
+                td.appendChild(document.createTextNode(data));
+                row.appendChild(td);
+            })
+
+            $("<td><button class='open-invoice' data-invoice='" + i + "'>Arve</button></td>").appendTo(row);
+            $("<td><button class='open-pdf-invoice' data-invoice='" + i + "'>PDF</button></td>").appendTo(row);
+            if (invoicesData.invoices[i][11] != null) {
+                $("<td><button class='send-email' data-invoice='" + i + "'>Saada e-mailiga</button></td>").appendTo(row);
+            }
+            else {
+                $("<td></td>").appendTo(row);
+            }
+            tableBody.appendChild(row);
+        }
+        table.appendChild(tableBody);
+
+        document.getElementById("invoices").appendChild(table);
+    }
+
+    $(document).ready(function () {
+
+        // "Open invoice" button functionality
+        $(".open-invoice").on("click", function () {
+            const invoiceID = $(this).data("invoice");
+
+            // Set client ID to localStorage
+            localStorage.setItem('selectedInvoice', invoiceID);
+            ipcRenderer.send('openSingleInvoice', {});
+
+        })
+
+        // "Print PDF" button functionality
+        $(".open-pdf-invoice").on("click", function () {
+            const invoiceID = $(this).data("invoice");
+
+            // Set client ID to localStorage
+            localStorage.setItem('selectedInvoice', invoiceID);
+
+            // Send invoice number to PDF function (to use in filename)
+            let invoiceNumber = JSON.parse(localStorage.getItem("invoiceData")).invoices;
+            invoiceNumber = invoiceNumber[invoiceID][13];
+
+            ipcRenderer.send("printPDF", { invoiceNumber: invoiceNumber });
+        })
+
+        // "Print all invoices to PDF-s" functionality
+        $("#all-to-pdf").on("click", function () {
+            // Get a list of invoice ID-s
+            let keys = [];
+            _.forEach(JSON.parse(localStorage.getItem("invoiceData")).invoices, (value, key) => {
+                keys.push(key);
+            })
+
+            ipcRenderer.send("printAllPDF", { keys: keys });
+        })
+
+        // "Print all invoices to PDF" functionality (single PDF)
+        $("#all-to-single-pdf").on("click", function () {
+            ipcRenderer.send("printAllSinglePDF",{});
+        })
+    }); // End document.ready()
+</script>
+
+</html>

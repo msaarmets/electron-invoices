@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<script>window.$ = window.jQuery = require('jquery');</script>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col d-flex justify-content-center align-items-center">
+                <button class="btn-default" id="load-file">Load file...</button>
+            </div>
+        </div>
+    </div>
+</body>
+<!--<script src="assets/dist/main.js"></script>-->
+<script>
+    const remoteModule = require('electron').remote;
+    // Root folder of app
+    let rootFolder = remoteModule.getGlobal('rootFolder');
+    // Javascript
+    require(rootFolder + "/assets/dist/main.js");
+    $('head').load(rootFolder + "/assets/pages/partials/head.html");
+    // CSS
+    $('head').append(`<link rel="stylesheet" type="text/css" href="${rootFolder + '/assets/dist/main.css'}">`)
+</script>
+
+<script>
+    /**
+    * The code can be included in some JS file and included
+    * via require or <script> in the renderer process
+    */
+
+    const { ipcRenderer } = require('electron');
+    $(document).ready(function () {
+        // Send information to the main process
+        // if a listener has been set, then the main process
+        // will react to the request !
+        $('button#load-file').on('click', function () { ipcRenderer.send('loadExcelFile', {}) });
+    });
+</script>
+
+</html>

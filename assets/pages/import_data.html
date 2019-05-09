@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<script>window.$ = window.jQuery = require('jquery');</script>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div id="table"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 offset-md-1 my-3">
+            <span>Invoice date:</span>
+            <input type="text" id="invoices-date"></input>
+            <span class="ml-3">Payment deadline: </span>
+            <input type="text" id="due-date">
+
+        </div>
+        <div class="row">
+            <div class="col-12 offset-md-1">
+                <button class="btn btn-primary" id="save-btn">Save</button>
+            </div>
+        </div>
+
+</body>
+<script>
+    const remoteModule = require('electron').remote;
+    // Root folder of app
+    let rootFolder = remoteModule.getGlobal('rootFolder');
+    // Javascript
+    require(rootFolder + "/assets/dist/main.js");
+    $('head').load(rootFolder + "/assets/pages/partials/head.html");
+    // CSS
+    $('head').append(`<link rel="stylesheet" type="text/css" href="${rootFolder + '/assets/dist/main.css'}">`)
+</script>
+<script>
+    // Contents of Excel file
+    let data = remoteModule.getGlobal('ExcelData');
+    
+    createTable(data);
+
+    // Function to generate table out of 2D array
+    function createTable(tableData) {
+        var table = document.createElement('table');
+        table.classList.add('table');
+        table.classList.add('table-striped');
+        var tableBody = document.createElement('tbody');
+        var tableHead = document.createElement('thead');
+
+        tableData.forEach(function (rowData, index) {
+            var row = document.createElement('tr');
+
+            // First row (header)
+            if (index == 0) {
+                rowData.forEach(function (cellData) {
+                    var header = document.createElement('th');
+                    header.appendChild(document.createTextNode(cellData));
+                    row.appendChild(header);
+                })
+            }
+            else {
+                rowData.forEach(function (cellData) {
+                    var cell = document.createElement('td');
+                    cell.appendChild(document.createTextNode(cellData));
+                    row.appendChild(cell);
+                });
+            }
+
+            tableBody.appendChild(row);
+        });
+
+        table.appendChild(tableBody);
+
+        let tableDiv = document.getElementById("table");
+        tableDiv.appendChild(table);
+    }
+</script>
+
+<script>
+    /**
+    * The code can be included in some JS file and included
+    * via require or <script> in the renderer process
+    */
+
+    const { ipcRenderer } = require('electron');
+    let jsonData = { ...data };
+    $(document).ready(function () {
+        // Send information to the main process
+        // if a listener has been set, then the main process
+        // will react to the request !
+        $('#save-btn').on('click', function () {
+            // Add selected invoice date to JSON object
+            jsonData = {
+                date: localStorage.getItem("selectedImportDate"),
+                dueDate: localStorage.getItem("selectedDueDate"),
+                invoices: jsonData
+            }
+            ipcRenderer.send('saveExcelDataToFile', jsonData);
+        });
+    });
+</script>
+
+<script>
+    /*
+    * Datepicker
+    */
+    $(document).ready(function () {
+        const moment = require('moment');
+        const root = remote.getGlobal('rootFolder');
+        // Datepicker CSS
+        const css = path.join(root, "node_modules/js-datepicker/dist/datepicker.min.css");
+        $('head').append(`<link rel="stylesheet" type="text/css" href="${css}">`);
+        // Datepicker JS
+        const datepicker = require("js-datepicker");
+        const InvoiceDatePicker = datepicker("#invoices-date",
+            {
+                position: 'tl',
+                startDay: 1,
+                dateSelected: new Date(),
+                formatter: function (el, date, instance) {
+                    // This will display the date as `1/1/2019`.
+                    el.value = moment(date).format("DD.MM.YYYY");
+                },
+                onSelect: function (instance) {
+                    // Show which date was selected.
+                    localStorage.setItem("selectedImportDate", instance.dateSelected);
+                }
+            });
+        
+        // Payment deadline datepicker
+        const paymentDeadlinePicker = datepicker("#due-date",
+            {
+                position: 'tl',
+                startDay: 1,
+                dateSelected: moment(new Date()).add(10, "d").toDate(),    // Default due date is today + 10 days
+                formatter: function (el, date, instance) {
+                    // This will display the date as `1/1/2019`.
+                    el.value = moment(date).format("DD.MM.YYYY");
+                },
+                onSelect: function (instance) {
+                    // Show which date was selected.
+                    localStorage.setItem("selectedDueDate", instance.dateSelected);
+                }
+            });
+
+        // Set default invoice date to today
+        localStorage.setItem("selectedImportDate", new Date());
+        // Set default due date to today + 10 days
+        localStorage.setItem("selectedDueDate", moment(new Date()).add(10, "d").toDate());
+    });
+</script>
+
+</html>

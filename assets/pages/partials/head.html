@@ -1,0 +1,21 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice generator</title>
+    <script>
+        const { remote } = require('electron');
+        const path = require("path");
+        // Lodash
+        if (typeof _ !== 'undefined') {
+            const _ = require("lodash");        // Check if lodash is already loaded somewhere else
+        }
+        // Root folder of app
+        const root = remote.getGlobal('rootFolder');
+        // CSS
+        const mainCSS = path.join(root, "/assets/dist/main.css");
+        // Bootstrap
+        const bootstrapCSS = path.join(root, "node_modules/bootstrap/dist/css/bootstrap.min.css");
+        $('head').append(`<link rel="stylesheet" type="text/css" href="${bootstrapCSS}">`);
+        $('head').append(`<link rel="stylesheet" type="text/css" href="${mainCSS}">`);
+    </script>
+    </style>
+</head>

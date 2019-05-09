@@ -1,0 +1,48 @@
+.single-invoice {
+  margin-right: 10%;
+  margin-left: 10%; }
+  @media print {
+    .single-invoice .invoice {
+      page-break-after: always; } }
+  .single-invoice .invoice-payment-info-block {
+    border: 1px solid black; }
+    .single-invoice .invoice-payment-info-block p {
+      margin-bottom: 5px; }
+  .single-invoice .receiver-info p {
+    font-size: 18px;
+    margin: 0px;
+    text-transform: capitalize; }
+  .single-invoice #invoice-rows-table table {
+    margin-top: 80px; }
+    .single-invoice #invoice-rows-table table thead th {
+      border-top: none;
+      border-bottom: 1px solid black;
+      padding: 0 .75rem; }
+    .single-invoice #invoice-rows-table table tbody td {
+      padding: .25rem .75rem;
+      border-bottom: 1px solid black; }
+    .single-invoice #invoice-rows-table table tbody tr.invoice-totals-block {
+      padding: 0; }
+      .single-invoice #invoice-rows-table table tbody tr.invoice-totals-block td {
+        border-bottom: none;
+        border-top: none;
+        text-align: right;
+        padding: 0 .75rem; }
+    .single-invoice #invoice-rows-table table tbody tr.invoice-total-to-pay-block td {
+      border-bottom: none;
+      border-top: 2px solid black;
+      text-align: right;
+      padding: 0 .75rem; }
+
+
+#asd #aasd {
+  border-bottom: 2px solid green;
+  font-weight: 200; }
+
+.page-header {
+  border-bottom: 2px solid #adb5bd;
+  color: #adb5bd; }
+
+@media print {
+  .page-header {
+    display: none !important; } }

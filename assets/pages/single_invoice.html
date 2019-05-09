@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+    <script>
+        window.$ = window.jQuery = require('jquery');
+    </script>
+
+    <body>
+        <div class="container single-invoice">
+
+        </div>
+    </body>
+    <script>
+        const remoteModule = require('electron').remote;
+        // Root folder of app
+        let rootFolder = remoteModule.getGlobal('rootFolder');
+        // Javascript
+        require(rootFolder + "/assets/dist/main.js");
+        $('head').load(rootFolder + "/assets/pages/partials/head.html");
+        // CSS
+        $('head').append(`<link rel="stylesheet" type="text/css" href="${rootFolder + '/assets/dist/main.css'}">`)
+    </script>
+
+    <script>
+        // Get invoice ID
+        // If it's set in URL parameter use this value
+        var url_string = window.location.href;
+        var url = new URL(url_string);
+        var id = url.searchParams.get("id");
+        let invoiceID;
+
+        if (id != null) {
+            invoiceID =
+                id; // Used in "print all" functionality to open web pages with URL parameter (single invoice view)
+        } else {
+            invoiceID = parseInt(localStorage.getItem("selectedInvoice")); // Else get id from localstorage
+        }
+
+        // Get only invoice(s) data
+        const displayAll = url.searchParams.get("all");
+
+        // If URL param "all" is set to "true", render all invoices in one view
+        // (Used to print all invoices at once)
+        let invoiceData = {};
+
+        if (displayAll == "true") {
+            invoiceData = JSON.parse(localStorage.getItem("invoiceData")).invoices;
+        } else {
+            invoiceData[0] = (JSON.parse(localStorage.getItem("invoiceData")).invoices[invoiceID]);
+        }
+
+        // General data for invoices (date, due date etc.)
+        const generalData = JSON.parse(localStorage.getItem("invoiceData"));
+    </script>
+
+    <script>
+        /*
+         * Set invoice data to HTML
+         */
+        const moment = require("moment");
+        const _ = require("lodash");
+        const config = require("../../config");
+
+        function toFloat(data) {
+            return Math.round(parseFloat(data) * 100) / 100;
+        }
+
+        _.forEach(invoiceData, (invoiceData, key) => {
+
+            // Skip first element (headers)
+            if (displayAll == "true" && key == 0) return;
+
+            function totalToPay() {
+                let values = {
+                    invoiceSum: invoiceData[5],
+                    balance: invoiceData[4],
+                    paymentsReceived: invoiceData[6]
+                }
+
+                // Replace null values with zero
+                _.forEach(values, (value, key) => {
+                    if (value == null) {
+                        values[key] = 0;
+                    }
+                })
+
+                // Calculate total sum to pay
+                let totalToPay = parseFloat(values.invoiceSum) + parseFloat(values.balance) - parseFloat(values
+                    .paymentsReceived);
+                totalToPay = Math.round(totalToPay * 100) / 100;
+                return totalToPay.toFixed(2);
+            }
+
+            // Add invoice HTML
+            let invoiceHtml = $(`<div class="row invoice">
+            <div class="col">
+                <h1 class="page-header">Invoice</h1>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-6"><strong class="text-uppercase">${config.issuer}</strong></div>
+            <div class="col-6"><strong><span class="text-uppercase">ARVE</span> nr</strong> <span id="invoice-nr">${invoiceData[13]}</span></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-6">${config.issuerPostalAddress}<br />Reg nr. ${config.issuerRegCode}</div>
+            <div class="col-4 invoice-payment-info-block">
+                <p>Kuupäev <span id="invoice-date">${moment(generalData.date).format("DD.MM.YYYY")}</span></p>
+                <p>Maksetähtaeg <strong><span id="invoice-due-date">${moment(generalData.dueDate).format("DD.MM.YYYY")}</span></strong></p>
+                <p>${config.issuerBankAccount[0]}</p>
+                <p>Liikmesus nr. <span id="custom1">${invoiceData[1]}</span></p>
+                <p><span id="email">${invoiceData[11]}</span></p>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12 receiver-info">
+                <p><span id="invoice-receiver">${invoiceData[2]}</span></p>
+                <p><span id="receiver-address">${invoiceData[8]}</span></p>
+                <p><span id="receiver-address2">${invoiceData[10] + " " + invoiceData[9]}</span></p>
+            </div>
+        </div>
+        <div class="row" id="invoice-rows-table">
+            <div class="col-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Kululiik</th>
+                            <th>Periood</th>
+                            <th>Kogus</th>
+                            <th>Ühik</th>
+                            <th>Ühiku hind</th>
+                            <th>Summa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${config.issuer} liikmemaks</td>
+                            <td>2018.a.</td>
+                            <td>1</td>
+                            <td>aasta</td>
+                            <td id="price">${toFloat(invoiceData[5]).toFixed(2)}</td>
+                            <td id="sum">${toFloat(invoiceData[5]).toFixed(2)}</td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5"><strong>Kokku</strong></td>
+                            <td id="invoice-sum" class="text-left font-weight-bold">${toFloat(invoiceData[5]).toFixed(2)}</td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5"><strong>Saldo 31.12.2017</strong></td>
+                            <td id="balance" class="text-left font-weight-bold">${toFloat(invoiceData[4]).toFixed(2)}</td>
+                        </tr>
+                        <tr class="invoice-totals-block">
+                            <td colspan="5">Laekunud 2017.a.</td>
+                            <td id="payments-received" class="text-left">${toFloat(invoiceData[6]).toFixed(2)}</td>
+                        </tr>
+                        <tr class="invoice-total-to-pay-block">
+                            <td colspan="5"><strong>Kuulub tasumisele</strong></td>
+                            <td id="total-to-pay" class="text-left font-weight-bold">${totalToPay()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row my-5" id="invoice-text">
+            <div class="col-12">
+                <p>${config.contactField}</p>
+            </div>
+        </div>`);
+
+            // If all invoices are printed to single PDF, skip invoices
+            // with total to pay 0
+            if (displayAll != "true") { // Single invoices
+                $(".container.single-invoice").append(invoiceHtml);
+            } else { // List of all invoices
+                if (totalToPay() != 0 && invoiceData[11] ==
+                    "") { // Only add invoices with total to pay different than zero and without e-mail address
+                    $(".container.single-invoice").append(invoiceHtml);
+                }
+            }
+        })
+    </script>
+
+    <script>
+
+    </script>
+
+</html>

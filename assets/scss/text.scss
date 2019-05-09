@@ -1,0 +1,10 @@
+.page-header{
+    border-bottom: 2px solid #adb5bd;
+    color: #adb5bd;
+}
+
+@media print {
+    .page-header{
+        display: none !important;
+    }
+}
